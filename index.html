@@ -26,25 +26,22 @@
     <!-- Firebase SDKs - loaded as modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, onSnapshot, doc, setDoc, getDoc, getDocs, writeBatch, updateDoc, arrayUnion, arrayRemove, setLogLevel } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore.js";
         
         // Make Firebase functions available to the React script
         window.Firebase = {
             initializeApp,
-            getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken,
+            getAuth, signInAnonymously, onAuthStateChanged,
             getFirestore, collection, addDoc, query, onSnapshot, doc, setDoc, getDoc, getDocs, writeBatch, updateDoc, arrayUnion, arrayRemove, setLogLevel
         };
     </script>
     
     <!-- React App -->
     <script type="text/babel">
-        // Use React from the window object
         const { useState, useEffect, useRef } = React;
-
-        // Use Firebase functions from the window object
         const {
-            initializeApp, getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken,
+            initializeApp, getAuth, signInAnonymously, onAuthStateChanged,
             getFirestore, collection, addDoc, query, onSnapshot, doc, setDoc, getDoc, getDocs, writeBatch, updateDoc, arrayUnion, arrayRemove, setLogLevel
         } = window.Firebase;
 
@@ -74,42 +71,44 @@
             const [showEmojiPicker, setShowEmojiPicker] = useState(false);
             const [reactionPickerMsgId, setReactionPickerMsgId] = useState(null);
             const [userColors, setUserColors] = useState({});
+            const [configError, setConfigError] = useState(false);
             const messagesEndRef = useRef(null);
             const fileInputRef = useRef(null);
             const userList = ['M', 'C', 'Ö', 'Gustavo', 'S', 'M', 'T'];
-            
-            // NOTE: These variables are provided by the Gemini environment.
-            // For real-world deployment, you would get these from your Firebase project settings.
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-chat-app';
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-                // FALLBACK: Add your Firebase config here if not in the Gemini environment
-                // apiKey: "...",
-                // authDomain: "...",
-                // projectId: "...",
-                // storageBucket: "...",
-                // messagingSenderId: "...",
-                // appId: "..."
+
+            // HIER HABEN SIE IHRE PERSÖNLICHE FIREBASE KONFIGURATION EINGEFÜGT
+            const firebaseConfig = {
+                apiKey: "AIzaSyCFWImLP_1Fa_JWW9MBGg1m8W-r8pV7gSI",
+                authDomain: "cafeabichat.firebaseapp.com",
+                projectId: "cafeabichat",
+                storageBucket: "cafeabichat.firebasestorage.app",
+                messagingSenderId: "882512297211",
+                appId: "1:882512297211:web:528a3005fc0517bed5c45e",
+                measurementId: "G-2RXNM7TMF0"
             };
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
             useEffect(() => {
-                if (!firebaseConfig.apiKey && !appId.includes('default')) {
-                    console.error("Firebase config is missing.");
+                if (!firebaseConfig.apiKey) {
+                    console.error("Firebase config ist leer! Bitte fügen Sie Ihre Konfiguration in die index.html ein.");
+                    setConfigError(true);
                     return;
                 }
                 try {
                     const app = initializeApp(firebaseConfig);
                     const authInstance = getAuth(app);
                     const dbInstance = getFirestore(app);
-                    setLogLevel('debug');
                     setAuth(authInstance);
                     setDb(dbInstance);
                     const unsubscribeAuth = onAuthStateChanged(authInstance, async (currentUser) => {
                         if (!currentUser) {
                             try {
-                                if (initialAuthToken) await signInWithCustomToken(authInstance, initialAuthToken);
-                                else await signInAnonymously(authInstance);
-                            } catch (e) { console.error("Login-Fehler:", e); }
+                                await signInAnonymously(authInstance);
+                            } catch (e) { 
+                                console.error("Anonymes Login fehlgeschlagen:", e);
+                                if (e.code === 'auth/operation-not-allowed') {
+                                    setConfigError("Anonyme Anmeldung ist in Firebase nicht aktiviert. Bitte aktivieren Sie sie in der Firebase Konsole -> Authentication -> Sign-in method.");
+                                }
+                            }
                         } else {
                             setUser(currentUser); setUserId(currentUser.uid);
                         }
@@ -117,13 +116,13 @@
                     });
                     return () => unsubscribeAuth();
                 } catch (e) { console.error("Firebase-Initialisierungsfehler:", e); }
-            }, [firebaseConfig]);
+            }, []); 
             
             useEffect(() => { if (isLoggedIn && "Notification" in window) { if (Notification.permission !== 'granted' && Notification.permission !== 'denied') Notification.requestPermission(); } }, [isLoggedIn]);
-            useEffect(() => { if (!isAuthReady || !db) return; const statusDocRef = doc(db, `/artifacts/${appId}/public/data/status/main`); const unsub = onSnapshot(statusDocRef, (docSnap) => { if (docSnap.exists() && docSnap.data().destroyed) setIsAppDestroyed(true); }, (e) => console.error("Fehler beim Abrufen des App-Status:", e)); return () => unsub(); }, [isAuthReady, db, appId]);
+            useEffect(() => { if (!isAuthReady || !db) return; const statusDocRef = doc(db, "status", "main"); const unsub = onSnapshot(statusDocRef, (docSnap) => { if (docSnap.exists() && docSnap.data().destroyed) setIsAppDestroyed(true); }, (e) => console.error("Fehler beim Abrufen des App-Status:", e)); return () => unsub(); }, [isAuthReady, db]);
             useEffect(() => {
                 if (!isLoggedIn || !db || isAppDestroyed) return;
-                const messagesRef = collection(db, `/artifacts/${appId}/public/data/messages`);
+                const messagesRef = collection(db, "messages");
                 const q = query(messagesRef);
                 const unsub = onSnapshot(q, (snapshot) => {
                     let newMessages = [];
@@ -142,28 +141,39 @@
                     setMessages(newMessages);
                 }, (e) => console.error("Fehler beim Abrufen der Nachrichten:", e));
                 return () => unsub();
-            }, [isLoggedIn, db, isAppDestroyed, appId, userId]);
+            }, [isLoggedIn, db, isAppDestroyed, userId, messages.length]);
+
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-            const selfDestructApp = async () => { if (!db) return; await deleteAllMessages(); await setDoc(doc(db, `/artifacts/${appId}/public/data/status/main`), { destroyed: true }); };
-            const deleteAllMessages = async () => { if (!db) return; const batch = writeBatch(db); const snapshot = await getDocs(collection(db, `/artifacts/${appId}/public/data/messages`)); snapshot.forEach(doc => batch.delete(doc.ref)); await batch.commit(); };
+            const selfDestructApp = async () => { if (!db) return; await deleteAllMessages(); await setDoc(doc(db, "status", "main"), { destroyed: true }); };
+            const deleteAllMessages = async () => { if (!db) return; const batch = writeBatch(db); const snapshot = await getDocs(collection(db, "messages")); snapshot.forEach(doc => batch.delete(doc.ref)); await batch.commit(); };
             const handleLogin = (e) => { e.preventDefault(); setLoginError(""); if (!selectedUser) { setLoginError("Bitte wähle einen Benutzer aus."); return; } if (password === "0000") { setDisplayName(selectedUser); setIsLoggedIn(true); setPassword(""); } else { setLoginError("Falsches Kennwort."); } };
             const handleLogout = () => { setIsLoggedIn(false); setDisplayName(""); setSelectedUser(""); setPassword(""); setLoginError(""); };
-            const handleReaction = async (messageId, emoji) => { if (!db || !userId) return; const msgRef = doc(db, `/artifacts/${appId}/public/data/messages/${messageId}`); const docSnap = await getDoc(msgRef); if (!docSnap.exists()) return; const reactions = docSnap.data().reactions || {}; const userList = reactions[emoji] || []; if (userList.includes(userId)) { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(userId) }); } else { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(userId) }); } setReactionPickerMsgId(null); };
-            const handleSendMessage = async (e) => { e.preventDefault(); const trimmedMessage = newMessage.trim(); if (trimmedMessage === "" || !db || !user) return; if (trimmedMessage === "0000") { await deleteAllMessages(); setNewMessage(""); return; } if (trimmedMessage === "0815") { await selfDestructApp(); setNewMessage(""); return; } await addDoc(collection(db, `/artifacts/${appId}/public/data/messages`), { type: 'text', content: trimmedMessage, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); setNewMessage(""); setShowEmojiPicker(false); };
-            const handleFileSelect = (e) => { const file = e.target.files[0]; if (!file || !file.type.startsWith('image/')) return; if(file.size > 1024 * 1024 * 2) { alert("Fehler: Das Bild ist zu groß (max. 2MB)."); return; } const reader = new FileReader(); reader.onload = (event) => addDoc(collection(db, `/artifacts/${appId}/public/data/messages`), { type: 'image', content: event.target.result, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); reader.readAsDataURL(file); e.target.value = null; };
+            const handleReaction = async (messageId, emoji) => { if (!db || !userId) return; const msgRef = doc(db, "messages", messageId); const docSnap = await getDoc(msgRef); if (!docSnap.exists()) return; const reactions = docSnap.data().reactions || {}; const userList = reactions[emoji] || []; if (userList.includes(userId)) { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(userId) }); } else { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(userId) }); } setReactionPickerMsgId(null); };
+            const handleSendMessage = async (e) => { e.preventDefault(); const trimmedMessage = newMessage.trim(); if (trimmedMessage === "" || !db || !user) return; if (trimmedMessage === "0000") { await deleteAllMessages(); setNewMessage(""); return; } if (trimmedMessage === "0815") { await selfDestructApp(); setNewMessage(""); return; } await addDoc(collection(db, "messages"), { type: 'text', content: trimmedMessage, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); setNewMessage(""); setShowEmojiPicker(false); };
+            const handleFileSelect = (e) => { const file = e.target.files[0]; if (!file || !file.type.startsWith('image/')) return; if(file.size > 1024 * 1024 * 2) { alert("Fehler: Das Bild ist zu groß (max. 2MB)."); return; } const reader = new FileReader(); reader.onload = (event) => addDoc(collection(db, "messages"), { type: 'image', content: event.target.result, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); reader.readAsDataURL(file); e.target.value = null; };
 
+            if (typeof configError === 'string') {
+                return (
+                    <div className="flex flex-col items-center justify-center h-screen bg-red-900 text-white p-8">
+                        <div className="text-center max-w-2xl">
+                            <h1 className="text-3xl font-bold">FEHLER: Firebase Konfiguration!</h1>
+                            <p className="mt-4 text-lg bg-red-800 p-3 rounded">{configError}</p>
+                        </div>
+                    </div>
+                );
+            }
             if (isAppDestroyed) return (<div className="flex flex-col items-center justify-center h-screen bg-black text-red-500"><h1 className="text-4xl font-bold">DIENST EINGESTELLT</h1></div>);
-            if (!isAuthReady || !window.Firebase) return (<div className="flex items-center justify-center h-screen bg-gray-900 text-white"><p className="text-2xl">Lade App...</p></div>);
+            if (!isAuthReady) return (<div className="flex items-center justify-center h-screen bg-gray-900 text-white"><p className="text-2xl">Lade App...</p></div>);
             if (!isLoggedIn) return (<div className="flex items-center justify-center h-screen bg-gray-800"><div className="w-full max-w-sm p-8 space-y-6 bg-gray-900 rounded-xl shadow-lg"><h1 className="text-3xl font-bold text-center text-cyan-400">Anmelden</h1><form onSubmit={handleLogin} className="space-y-4"><div><label htmlFor="user-select" className="text-sm font-medium text-gray-300">Benutzer auswählen</label><select id="user-select" value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"><option value="" disabled>-- Bitte wählen --</option>{userList.map((name, index) => (<option key={`${name}-${index}`} value={name}>{name}</option>))}</select></div><div><label htmlFor="password" className="text-sm font-medium text-gray-300">Kennwort</label><input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500" /></div>{loginError && <p className="text-sm text-red-500 text-center">{loginError}</p>}<button type="submit" className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg shadow-md transition-transform transform hover:scale-105">Betreten</button></form></div></div>);
             
             return (<div className="flex flex-col h-screen bg-gray-800 text-white font-sans"><header className="flex items-center justify-between p-4 bg-gray-900 shadow-lg border-b border-gray-700"><h1 className="text-xl md:text-2xl font-bold" style={{color: userColors[displayName] || '#FFFFFF'}}>Cafe Abi Chat</h1><div className="flex items-center space-x-4"><div className="text-right"><div className="flex items-center space-x-2"><span className="text-sm text-gray-300 hidden md:inline">Angemeldet als:</span><span className="font-semibold" style={{color: userColors[displayName] || '#FFFFFF'}}>{displayName}</span></div><div className="text-xs text-gray-500 mt-1">ID: {userId}</div></div><button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors">Wechseln</button></div></header><main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-2">{messages.map((msg) => { const userColor = userColors[msg.displayName] || '#718096'; return (<div key={msg.id} className={`group flex items-end gap-3 max-w-xl ${msg.uid === userId ? "ml-auto flex-row-reverse" : "mr-auto"}`}><div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style={{backgroundColor: userColor}}>{msg.displayName ? msg.displayName.charAt(0) : '?'}</div><div className="relative"><div className="rounded-xl px-4 py-2 shadow-md" style={{backgroundColor: msg.uid === userId ? userColor : '#2D3748'}}><div className="flex items-baseline gap-2"><p className="font-bold text-sm" style={{color: msg.uid !== userId ? userColor : '#FFFFFF'}}>{msg.uid === userId ? 'Du' : msg.displayName}</p><p className="text-xs text-gray-400">{msg.createdAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</p></div>{msg.type === 'image' ? (<img src={msg.content} alt="Gesendetes Bild" className="mt-2 rounded-lg max-w-xs md:max-w-sm" />) : (<p className="text-white mt-1 whitespace-pre-wrap break-words">{msg.content}</p>)}</div>{msg.reactions && Object.keys(msg.reactions).length > 0 && (<div className="flex gap-1 flex-wrap mt-1 px-1">{Object.entries(msg.reactions).map(([emoji, uids]) => (uids && uids.length > 0 && <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${uids.includes(userId) ? 'border-cyan-400' : 'border-gray-500'}`} style={{backgroundColor: uids.includes(userId) ? userColor : '#4A5568'}}>{emoji} {uids.length}</button>))}</div>)}<button onClick={() => setReactionPickerMsgId(reactionPickerMsgId === msg.id ? null : msg.id)} className="absolute -top-3 -right-3 bg-gray-700 rounded-full p-1 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"><EmojiIcon /></button>{reactionPickerMsgId === msg.id && (<div className="absolute -top-12 right-0 z-20"><EmojiPalette onSelect={(emoji) => handleReaction(msg.id, emoji)} /></div>)}</div></div>);})} <div ref={messagesEndRef} /> </main><footer className="p-4 bg-gray-900 border-t border-gray-700"><div className="relative">{showEmojiPicker && <EmojiPalette onSelect={(emoji) => setNewMessage(m => m + emoji)} /> }<form onSubmit={handleSendMessage} className="flex items-center space-x-2 sm:space-x-4"><input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current.click()} className="p-2 text-gray-400 hover:text-white transition-colors"><AttachmentIcon /></button><button type="button" onClick={() => setShowEmojiPicker(s => !s)} className="p-2 text-gray-400 hover:text-white transition-colors"><EmojiIcon /></button><input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Schreibe eine Nachricht..." className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" autoComplete="off" /><button type="submit" disabled={!newMessage.trim()} className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 text-white font-bold p-2 rounded-lg flex items-center justify-center transition-colors"><SendIcon /></button></form></div></footer></div>);
         };
         
-        // Render the App to the #root element
         const container = document.getElementById('root');
         const root = ReactDOM.createRoot(container);
         root.render(<App />);
     </script>
 </body>
 </html>
+```
