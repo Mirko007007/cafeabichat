@@ -178,7 +178,25 @@
             const handleLogin = (e) => { e.preventDefault(); setLoginError(""); if (!selectedUser) { setLoginError("Bitte wähle einen Benutzer aus."); return; } if (password === "0000") { setDisplayName(selectedUser); setIsLoggedIn(true); setPassword(""); } else { setLoginError("Falsches Kennwort."); } };
             const handleLogout = () => { setIsLoggedIn(false); setDisplayName(""); setSelectedUser(""); setPassword(""); setLoginError(""); };
             const handleReaction = async (messageId, emoji) => { if (!db || !userId) return; const msgRef = doc(db, "messages", messageId); const docSnap = await getDoc(msgRef); if (!docSnap.exists()) return; const reactions = docSnap.data().reactions || {}; const userList = reactions[emoji] || []; if (userList.includes(userId)) { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(userId) }); } else { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(userId) }); } setReactionPickerMsgId(null); };
-            const handleFileSelect = async (e) => { const file = e.target.files[0]; if (!file || !file.type.startsWith('image/')) return; if(file.size > 1024 * 1024 * 5) { alert("Fehler: Das Bild ist zu groß (max. 5MB)."); return; } const reader = new FileReader(); reader.onload = async (event) => { try { await addDoc(collection(db, "messages"), { type: 'image', content: event.target.result, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); } catch (error) { console.error("Fehler beim Senden des Bildes:", error); alert(`Bild konnte nicht gesendet werden. Fehler: ${error.message}`); }}; reader.readAsDataURL(file); e.target.value = null; };
+            const handleFileSelect = async (e) => { 
+                const file = e.target.files[0]; 
+                if (!file || !file.type.startsWith('image/')) return; 
+                if(file.size > 1024 * 1024 * 10) { // Erhöht auf 10MB
+                    alert("Fehler: Das Bild ist zu groß (max. 10MB)."); 
+                    return; 
+                } 
+                const reader = new FileReader(); 
+                reader.onload = async (event) => { 
+                    try { 
+                        await addDoc(collection(db, "messages"), { type: 'image', content: event.target.result, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); 
+                    } catch (error) { 
+                        console.error("Fehler beim Senden des Bildes:", error); 
+                        alert(`Bild konnte nicht gesendet werden. Fehler: ${error.message}`); 
+                    }
+                }; 
+                reader.readAsDataURL(file); 
+                e.target.value = null; 
+            };
 
             if (configError) return (<div className="flex flex-col items-center justify-center h-screen bg-red-900 text-white p-8"><div className="text-center max-w-2xl"><h1 className="text-3xl font-bold">FEHLER: Firebase Konfiguration!</h1><p className="mt-4 text-lg bg-red-800 p-3 rounded">{configError}</p></div></div>);
             if (isAppDestroyed) return (<div className="flex flex-col items-center justify-center h-screen bg-black text-red-500"><h1 className="text-4xl font-bold">DIENST EINGESTELLT</h1></div>);
