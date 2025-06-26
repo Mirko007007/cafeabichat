@@ -49,13 +49,29 @@
         const SendIcon = () => (<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>);
         const AttachmentIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path fillRule="evenodd" d="M18.97 3.659a2.25 2.25 0 00-3.182 0l-10.5 10.5a.75.75 0 001.06 1.06l10.5-10.5a.75.75 0 011.06 0s.001.001.002.001a.75.75 0 010 1.06l-6.75 6.75a2.25 2.25 0 000 3.182s.001.001.001.002a2.25 2.25 0 003.182 0l6.75-6.75a3.75 3.75 0 00-5.303-5.303l-10.5 10.5a.75.75 0 000 1.061l.001.001a.75.75 0 001.06 0l10.5-10.5a2.25 2.25 0 013.182 0s.001.001.002.001a2.25 2.25 0 010 3.182l-6.75 6.75a3.75 3.75 0 11-5.303-5.303l6.75-6.75a.75.75 0 00-1.06-1.06l-6.75 6.75a5.25 5.25 0 007.424 7.424l10.5-10.5a3.75 3.75 0 000-5.303z" clipRule="evenodd" /></svg>);
         const EmojiIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM8.25 10.5a.75.75 0 000 1.5h.01a.75.75 0 000-1.5H8.25zm3.74-1.24a.75.75 0 00-1.06-1.06l-1.5 1.5a.75.75 0 101.06 1.06l1.5-1.5zm2.01 1.24a.75.75 0 000 1.5h.01a.75.75 0 000-1.5H14zm3.25-1.5a.75.75 0 00-1.06-1.06l-1.5 1.5a.75.75 0 101.06 1.06l1.5-1.5zM12 15.75a3 3 0 002.645-1.61.75.75 0 011.23.756 4.5 4.5 0 01-7.75 0 .75.75 0 011.23-.756A3 3 0 0012 15.75z" clipRule="evenodd" /></svg>);
+        const SkullIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>);
         const EMOJIS = ['😂', '❤️', '👍', '🤔', '😢', '🎉', '🔥', '🙏'];
         const stringToHslColor = (str, s, l) => { let hash = 0; for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); } const h = hash % 360; return `hsl(${h}, ${s}%, ${l}%)`; };
         const EmojiPalette = ({ onSelect }) => (<div className="absolute bottom-12 bg-gray-800 border border-gray-700 rounded-lg p-2 shadow-lg flex flex-wrap gap-2 z-10">{EMOJIS.map(emoji => (<button key={emoji} onClick={() => onSelect(emoji)} className="text-2xl p-1 rounded-md hover:bg-gray-700 transition-colors">{emoji}</button>))}</div>);
 
-        // --- HAUPTKOMPONENTE ---
+        const ConfirmationModal = ({ onConfirm, onCancel }) => (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+                <div className="bg-gray-900 rounded-lg p-8 shadow-2xl text-center max-w-sm mx-4">
+                    <h2 className="text-2xl font-bold text-red-500">WARNUNG</h2>
+                    <p className="my-4 text-gray-300">
+                        Sind Sie absolut sicher? Diese Aktion löscht **alle** Nachrichten und Bilder für **alle** Benutzer unwiderruflich und sperrt die App permanent.
+                    </p>
+                    <div className="flex justify-center gap-4 mt-6">
+                        <button onClick={onCancel} className="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-colors">Abbrechen</button>
+                        <button onClick={onConfirm} className="px-6 py-2 bg-red-700 hover:bg-red-800 rounded-lg font-semibold transition-colors flex items-center">
+                            <SkullIcon /> Ja, alles löschen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+
         const App = () => {
-            const [auth, setAuth] = useState(null);
             const [db, setDb] = useState(null);
             const [user, setUser] = useState(null);
             const [userId, setUserId] = useState(null);
@@ -71,12 +87,12 @@
             const [showEmojiPicker, setShowEmojiPicker] = useState(false);
             const [reactionPickerMsgId, setReactionPickerMsgId] = useState(null);
             const [userColors, setUserColors] = useState({});
-            const [configError, setConfigError] = useState(false);
+            const [configError, setConfigError] = useState(null);
+            const [showConfirmModal, setShowConfirmModal] = useState(false);
             const messagesEndRef = useRef(null);
             const fileInputRef = useRef(null);
             const userList = ['M', 'C', 'Ö', 'Gustavo', 'S', 'M', 'T'];
 
-            // HIER HABEN SIE IHRE PERSÖNLICHE FIREBASE KONFIGURATION EINGEFÜGT
             const firebaseConfig = {
                 apiKey: "AIzaSyCFWImLP_1Fa_JWW9MBGg1m8W-r8pV7gSI",
                 authDomain: "cafeabichat.firebaseapp.com",
@@ -88,45 +104,31 @@
             };
 
             useEffect(() => {
-                if (!firebaseConfig.apiKey) {
-                    console.error("Firebase config ist leer! Bitte fügen Sie Ihre Konfiguration in die index.html ein.");
-                    setConfigError(true);
-                    return;
-                }
+                if (!firebaseConfig.apiKey) { setConfigError("Firebase config ist leer! Bitte fügen Sie Ihre Konfiguration in die index.html ein."); return; }
                 try {
                     const app = initializeApp(firebaseConfig);
                     const authInstance = getAuth(app);
                     const dbInstance = getFirestore(app);
-                    setAuth(authInstance);
                     setDb(dbInstance);
                     const unsubscribeAuth = onAuthStateChanged(authInstance, async (currentUser) => {
                         if (!currentUser) {
-                            try {
-                                await signInAnonymously(authInstance);
-                            } catch (e) { 
-                                console.error("Anonymes Login fehlgeschlagen:", e);
-                                if (e.code === 'auth/operation-not-allowed') {
-                                    setConfigError("Anonyme Anmeldung ist in Firebase nicht aktiviert. Bitte aktivieren Sie sie in der Firebase Konsole -> Authentication -> Sign-in method.");
-                                }
-                            }
-                        } else {
-                            setUser(currentUser); setUserId(currentUser.uid);
-                        }
+                            try { await signInAnonymously(authInstance); } 
+                            catch (e) { if (e.code === 'auth/operation-not-allowed' || e.code === 'auth/configuration-not-found') setConfigError("Anonyme Anmeldung ist in Firebase nicht aktiviert. Bitte aktivieren Sie sie in der Firebase Konsole -> Authentication -> Sign-in method."); }
+                        } else { setUser(currentUser); setUserId(currentUser.uid); }
                         setIsAuthReady(true);
                     });
                     return () => unsubscribeAuth();
                 } catch (e) { console.error("Firebase-Initialisierungsfehler:", e); }
             }, []); 
             
-            useEffect(() => { if (isLoggedIn && "Notification" in window) { if (Notification.permission !== 'granted' && Notification.permission !== 'denied') Notification.requestPermission(); } }, [isLoggedIn]);
-            useEffect(() => { if (!isAuthReady || !db) return; const statusDocRef = doc(db, "status", "main"); const unsub = onSnapshot(statusDocRef, (docSnap) => { if (docSnap.exists() && docSnap.data().destroyed) setIsAppDestroyed(true); }, (e) => console.error("Fehler beim Abrufen des App-Status:", e)); return () => unsub(); }, [isAuthReady, db]);
+            useEffect(() => { if (isLoggedIn && "Notification" in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') Notification.requestPermission(); }, [isLoggedIn]);
+            useEffect(() => { if (!isAuthReady || !db) return; const statusDocRef = doc(db, "status", "main"); const unsub = onSnapshot(statusDocRef, (docSnap) => { if (docSnap.exists() && docSnap.data().destroyed) setIsAppDestroyed(true); }, (e) => {}); return () => unsub(); }, [isAuthReady, db]);
             useEffect(() => {
                 if (!isLoggedIn || !db || isAppDestroyed) return;
                 const messagesRef = collection(db, "messages");
                 const q = query(messagesRef);
                 const unsub = onSnapshot(q, (snapshot) => {
-                    let newMessages = [];
-                    let colors = { ...userColors };
+                    let newMessages = [], colors = { ...userColors };
                     snapshot.forEach(doc => {
                         const data = doc.data();
                         if (data.displayName && !colors[data.displayName]) colors[data.displayName] = stringToHslColor(data.displayName, 70, 65);
@@ -139,35 +141,60 @@
                         if (lastNewMessage.uid !== userId && document.hidden) new Notification(`Neue Nachricht von ${lastNewMessage.displayName}`, { body: lastNewMessage.type === 'image' ? 'Bild gesendet' : lastNewMessage.content, icon: 'https://placehold.co/64x64/7E22CE/FFFFFF?text=C' });
                     }
                     setMessages(newMessages);
-                }, (e) => console.error("Fehler beim Abrufen der Nachrichten:", e));
+                }, (e) => { console.error("Fehler beim Abrufen der Nachrichten:", e); alert("Nachrichten konnten nicht geladen werden. Prüfen Sie Ihre Firestore-Sicherheitsregeln."); });
                 return () => unsub();
-            }, [isLoggedIn, db, isAppDestroyed, userId, messages.length]);
-
+            }, [isLoggedIn, db, isAppDestroyed, userId]);
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
+            const sendMessage = async () => {
+                const trimmedMessage = newMessage.trim();
+                if (trimmedMessage === "" || !db || !user) return;
+                try {
+                    if (trimmedMessage === "0000") { await deleteAllMessages(); }
+                    else if (trimmedMessage === "0815") { setShowConfirmModal(true); } // Zeigt Modal statt direkter Aktion
+                    else if (trimmedMessage === "2222") { await addDoc(collection(db, "messages"), { type: 'alert', content: 'Alles Vernichten !!!!', createdAt: new Date(), uid: 'system', displayName: 'SYSTEMWARNUNG'}); }
+                    else { await addDoc(collection(db, "messages"), { type: 'text', content: trimmedMessage, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); }
+                    setNewMessage("");
+                    setShowEmojiPicker(false);
+                } catch (error) { console.error("Fehler beim Senden:", error); alert(`Nachricht konnte nicht gesendet werden. Fehler: ${error.message}`);}
+            };
+            const handleFormSubmit = (e) => { e.preventDefault(); sendMessage(); };
+            const handleInputKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
             const selfDestructApp = async () => { if (!db) return; await deleteAllMessages(); await setDoc(doc(db, "status", "main"), { destroyed: true }); };
+            const handleConfirmDestruct = () => { selfDestructApp(); setShowConfirmModal(false); };
             const deleteAllMessages = async () => { if (!db) return; const batch = writeBatch(db); const snapshot = await getDocs(collection(db, "messages")); snapshot.forEach(doc => batch.delete(doc.ref)); await batch.commit(); };
             const handleLogin = (e) => { e.preventDefault(); setLoginError(""); if (!selectedUser) { setLoginError("Bitte wähle einen Benutzer aus."); return; } if (password === "0000") { setDisplayName(selectedUser); setIsLoggedIn(true); setPassword(""); } else { setLoginError("Falsches Kennwort."); } };
             const handleLogout = () => { setIsLoggedIn(false); setDisplayName(""); setSelectedUser(""); setPassword(""); setLoginError(""); };
             const handleReaction = async (messageId, emoji) => { if (!db || !userId) return; const msgRef = doc(db, "messages", messageId); const docSnap = await getDoc(msgRef); if (!docSnap.exists()) return; const reactions = docSnap.data().reactions || {}; const userList = reactions[emoji] || []; if (userList.includes(userId)) { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(userId) }); } else { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(userId) }); } setReactionPickerMsgId(null); };
-            const handleSendMessage = async (e) => { e.preventDefault(); const trimmedMessage = newMessage.trim(); if (trimmedMessage === "" || !db || !user) return; if (trimmedMessage === "0000") { await deleteAllMessages(); setNewMessage(""); return; } if (trimmedMessage === "0815") { await selfDestructApp(); setNewMessage(""); return; } await addDoc(collection(db, "messages"), { type: 'text', content: trimmedMessage, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); setNewMessage(""); setShowEmojiPicker(false); };
-            const handleFileSelect = (e) => { const file = e.target.files[0]; if (!file || !file.type.startsWith('image/')) return; if(file.size > 1024 * 1024 * 2) { alert("Fehler: Das Bild ist zu groß (max. 2MB)."); return; } const reader = new FileReader(); reader.onload = (event) => addDoc(collection(db, "messages"), { type: 'image', content: event.target.result, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); reader.readAsDataURL(file); e.target.value = null; };
+            const handleFileSelect = async (e) => { const file = e.target.files[0]; if (!file || !file.type.startsWith('image/')) return; if(file.size > 1024 * 1024 * 2) { alert("Fehler: Das Bild ist zu groß (max. 2MB)."); return; } const reader = new FileReader(); reader.onload = async (event) => { try { await addDoc(collection(db, "messages"), { type: 'image', content: event.target.result, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); } catch (error) { console.error("Fehler beim Senden des Bildes:", error); alert(`Bild konnte nicht gesendet werden. Fehler: ${error.message}`); }}; reader.readAsDataURL(file); e.target.value = null; };
 
-            if (typeof configError === 'string') {
-                return (
-                    <div className="flex flex-col items-center justify-center h-screen bg-red-900 text-white p-8">
-                        <div className="text-center max-w-2xl">
-                            <h1 className="text-3xl font-bold">FEHLER: Firebase Konfiguration!</h1>
-                            <p className="mt-4 text-lg bg-red-800 p-3 rounded">{configError}</p>
-                        </div>
-                    </div>
-                );
-            }
+            if (configError) return (<div className="flex flex-col items-center justify-center h-screen bg-red-900 text-white p-8"><div className="text-center max-w-2xl"><h1 className="text-3xl font-bold">FEHLER: Firebase Konfiguration!</h1><p className="mt-4 text-lg bg-red-800 p-3 rounded">{configError}</p></div></div>);
             if (isAppDestroyed) return (<div className="flex flex-col items-center justify-center h-screen bg-black text-red-500"><h1 className="text-4xl font-bold">DIENST EINGESTELLT</h1></div>);
             if (!isAuthReady) return (<div className="flex items-center justify-center h-screen bg-gray-900 text-white"><p className="text-2xl">Lade App...</p></div>);
             if (!isLoggedIn) return (<div className="flex items-center justify-center h-screen bg-gray-800"><div className="w-full max-w-sm p-8 space-y-6 bg-gray-900 rounded-xl shadow-lg"><h1 className="text-3xl font-bold text-center text-cyan-400">Anmelden</h1><form onSubmit={handleLogin} className="space-y-4"><div><label htmlFor="user-select" className="text-sm font-medium text-gray-300">Benutzer auswählen</label><select id="user-select" value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"><option value="" disabled>-- Bitte wählen --</option>{userList.map((name, index) => (<option key={`${name}-${index}`} value={name}>{name}</option>))}</select></div><div><label htmlFor="password" className="text-sm font-medium text-gray-300">Kennwort</label><input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500" /></div>{loginError && <p className="text-sm text-red-500 text-center">{loginError}</p>}<button type="submit" className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg shadow-md transition-transform transform hover:scale-105">Betreten</button></form></div></div>);
             
-            return (<div className="flex flex-col h-screen bg-gray-800 text-white font-sans"><header className="flex items-center justify-between p-4 bg-gray-900 shadow-lg border-b border-gray-700"><h1 className="text-xl md:text-2xl font-bold" style={{color: userColors[displayName] || '#FFFFFF'}}>Cafe Abi Chat</h1><div className="flex items-center space-x-4"><div className="text-right"><div className="flex items-center space-x-2"><span className="text-sm text-gray-300 hidden md:inline">Angemeldet als:</span><span className="font-semibold" style={{color: userColors[displayName] || '#FFFFFF'}}>{displayName}</span></div><div className="text-xs text-gray-500 mt-1">ID: {userId}</div></div><button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors">Wechseln</button></div></header><main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-2">{messages.map((msg) => { const userColor = userColors[msg.displayName] || '#718096'; return (<div key={msg.id} className={`group flex items-end gap-3 max-w-xl ${msg.uid === userId ? "ml-auto flex-row-reverse" : "mr-auto"}`}><div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style={{backgroundColor: userColor}}>{msg.displayName ? msg.displayName.charAt(0) : '?'}</div><div className="relative"><div className="rounded-xl px-4 py-2 shadow-md" style={{backgroundColor: msg.uid === userId ? userColor : '#2D3748'}}><div className="flex items-baseline gap-2"><p className="font-bold text-sm" style={{color: msg.uid !== userId ? userColor : '#FFFFFF'}}>{msg.uid === userId ? 'Du' : msg.displayName}</p><p className="text-xs text-gray-400">{msg.createdAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</p></div>{msg.type === 'image' ? (<img src={msg.content} alt="Gesendetes Bild" className="mt-2 rounded-lg max-w-xs md:max-w-sm" />) : (<p className="text-white mt-1 whitespace-pre-wrap break-words">{msg.content}</p>)}</div>{msg.reactions && Object.keys(msg.reactions).length > 0 && (<div className="flex gap-1 flex-wrap mt-1 px-1">{Object.entries(msg.reactions).map(([emoji, uids]) => (uids && uids.length > 0 && <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${uids.includes(userId) ? 'border-cyan-400' : 'border-gray-500'}`} style={{backgroundColor: uids.includes(userId) ? userColor : '#4A5568'}}>{emoji} {uids.length}</button>))}</div>)}<button onClick={() => setReactionPickerMsgId(reactionPickerMsgId === msg.id ? null : msg.id)} className="absolute -top-3 -right-3 bg-gray-700 rounded-full p-1 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"><EmojiIcon /></button>{reactionPickerMsgId === msg.id && (<div className="absolute -top-12 right-0 z-20"><EmojiPalette onSelect={(emoji) => handleReaction(msg.id, emoji)} /></div>)}</div></div>);})} <div ref={messagesEndRef} /> </main><footer className="p-4 bg-gray-900 border-t border-gray-700"><div className="relative">{showEmojiPicker && <EmojiPalette onSelect={(emoji) => setNewMessage(m => m + emoji)} /> }<form onSubmit={handleSendMessage} className="flex items-center space-x-2 sm:space-x-4"><input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" /><button type="button" onClick={() => fileInputRef.current.click()} className="p-2 text-gray-400 hover:text-white transition-colors"><AttachmentIcon /></button><button type="button" onClick={() => setShowEmojiPicker(s => !s)} className="p-2 text-gray-400 hover:text-white transition-colors"><EmojiIcon /></button><input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Schreibe eine Nachricht..." className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" autoComplete="off" /><button type="submit" disabled={!newMessage.trim()} className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 text-white font-bold p-2 rounded-lg flex items-center justify-center transition-colors"><SendIcon /></button></form></div></footer></div>);
+            return (<div className="flex flex-col h-screen bg-gray-800 text-white font-sans">
+                {showConfirmModal && <ConfirmationModal onConfirm={handleConfirmDestruct} onCancel={() => setShowConfirmModal(false)} />}
+                <header className="flex items-center justify-between p-4 bg-gray-900 shadow-lg border-b border-gray-700">
+                    <button onClick={() => setShowConfirmModal(true)} className="bg-red-700 hover:bg-red-800 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors flex items-center shadow-lg"><SkullIcon /> ALLES LÖSCHEN</button>
+                    <h1 className="text-xl md:text-2xl font-bold" style={{color: userColors[displayName] || '#FFFFFF'}}>Cafe Abi Chat</h1>
+                    <div className="flex items-center space-x-4"><div className="text-right"><div className="flex items-center space-x-2"><span className="text-sm text-gray-300 hidden md:inline">Angemeldet als:</span><span className="font-semibold" style={{color: userColors[displayName] || '#FFFFFF'}}>{displayName}</span></div><div className="text-xs text-gray-500 mt-1">ID: {userId}</div></div><button onClick={handleLogout} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors">Wechseln</button></div>
+                </header>
+                <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-2">{messages.map((msg) => {
+                    if (msg.type === 'alert') {
+                        return (<div key={msg.id} className="w-full my-3 text-center"><div className="inline-block bg-red-800 border-2 border-red-500 rounded-lg px-6 py-2 animate-pulse"><p className="text-white font-bold text-xl uppercase tracking-wider">{msg.content}</p></div></div>);
+                    }
+                    const userColor = userColors[msg.displayName] || '#718096';
+                    return (<div key={msg.id} className={`group flex items-end gap-3 max-w-xl ${msg.uid === userId ? "ml-auto flex-row-reverse" : "mr-auto"}`}><div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style={{backgroundColor: userColor}}>{msg.displayName ? msg.displayName.charAt(0) : '?'}</div><div className="relative"><div className="rounded-xl px-4 py-2 shadow-md" style={{backgroundColor: msg.uid === userId ? userColor : '#2D3748'}}><div className="flex items-baseline gap-2"><p className="font-bold text-sm" style={{color: msg.uid !== userId ? userColor : '#FFFFFF'}}>{msg.uid === userId ? 'Du' : msg.displayName}</p><p className="text-xs text-gray-400">{msg.createdAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</p></div>{msg.type === 'image' ? (<img src={msg.content} alt="Gesendetes Bild" className="mt-2 rounded-lg max-w-xs md:max-w-sm" />) : (<p className="text-white mt-1 whitespace-pre-wrap break-words">{msg.content}</p>)}</div>{msg.reactions && Object.keys(msg.reactions).length > 0 && (<div className="flex gap-1 flex-wrap mt-1 px-1">{Object.entries(msg.reactions).map(([emoji, uids]) => (uids && uids.length > 0 && <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${uids.includes(userId) ? 'border-cyan-400' : 'border-gray-500'}`} style={{backgroundColor: uids.includes(userId) ? userColor : '#4A5568'}}>{emoji} {uids.length}</button>))}</div>)}<button onClick={() => setReactionPickerMsgId(reactionPickerMsgId === msg.id ? null : msg.id)} className="absolute -top-3 -right-3 bg-gray-700 rounded-full p-1 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"><EmojiIcon /></button>{reactionPickerMsgId === msg.id && (<div className="absolute -top-12 right-0 z-20"><EmojiPalette onSelect={(emoji) => handleReaction(msg.id, emoji)} /></div>)}</div></div>);
+                })} <div ref={messagesEndRef} /> </main><footer className="p-4 bg-gray-900 border-t border-gray-700"><div className="relative">{showEmojiPicker && <EmojiPalette onSelect={(emoji) => setNewMessage(m => m + emoji)} /> }
+                <form onSubmit={handleFormSubmit} className="flex items-center space-x-2 sm:space-x-4">
+                    <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" />
+                    <button type="button" onClick={() => fileInputRef.current.click()} className="p-2 text-gray-400 hover:text-white transition-colors"><AttachmentIcon /></button>
+                    <button type="button" onClick={() => setShowEmojiPicker(s => !s)} className="p-2 text-gray-400 hover:text-white transition-colors"><EmojiIcon /></button>
+                    <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleInputKeyDown} placeholder="Schreibe eine Nachricht..." className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" autoComplete="off" />
+                    <button type="submit" disabled={!newMessage.trim()} className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 text-white font-bold p-2 rounded-lg flex items-center justify-center transition-colors"><SendIcon /></button>
+                </form>
+            </div></footer></div>);
         };
         
         const container = document.getElementById('root');
@@ -176,4 +203,3 @@
     </script>
 </body>
 </html>
-```
