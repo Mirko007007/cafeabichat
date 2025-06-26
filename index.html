@@ -98,6 +98,7 @@
             const [processingAudio, setProcessingAudio] = useState(false);
             const mediaRecorderRef = useRef(null);
             const audioChunksRef = useRef([]);
+            const streamRef = useRef(null);
             const messagesEndRef = useRef(null);
             const userList = ['M', 'C', 'Ö', 'Gustavo', 'S', 'M', 'T'];
             const firebaseConfig = {
@@ -159,7 +160,6 @@
             
             const uploadFile = async (file, path) => {
                 if (!storage) return null;
-                setProcessingAudio(true);
                 const storageRef = ref(storage, path);
                 try {
                     await uploadBytes(storageRef, file);
@@ -168,8 +168,6 @@
                     console.error("Upload-Fehler:", error);
                     alert(`Datei konnte nicht hochgeladen werden. Fehler: ${error.code}`);
                     return null;
-                } finally {
-                    setProcessingAudio(false);
                 }
             };
             
@@ -185,9 +183,7 @@
                 const offlineCtx = new OfflineAudioContext(originalBuffer.numberOfChannels, originalBuffer.length, originalBuffer.sampleRate);
                 const source = offlineCtx.createBufferSource();
                 source.buffer = originalBuffer;
-
                 source.detune.value = -800;
-                
                 source.connect(offlineCtx.destination);
                 source.start();
 
@@ -230,6 +226,7 @@
             const startRecording = async () => {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    streamRef.current = stream;
                     mediaRecorderRef.current = new MediaRecorder(stream);
                     audioChunksRef.current = [];
                     mediaRecorderRef.current.ondataavailable = (event) => audioChunksRef.current.push(event.data);
@@ -242,11 +239,10 @@
                             const downloadURL = await uploadFile(distortedBlob, filePath);
                             if(downloadURL) sendMediaMessage(downloadURL, 'audio');
                         } catch (error) {
-                            console.error("Fehler bei der Audio-Verzerrung: ", error);
+                            console.error("Fehler bei der Audio-Verarbeitung: ", error);
                             alert("Die Sprachnachricht konnte nicht verarbeitet werden.");
                         } finally {
                            setProcessingAudio(false);
-                           stream.getTracks().forEach(track => track.stop());
                         }
                     };
                     mediaRecorderRef.current.start();
@@ -256,9 +252,14 @@
                     alert("Zugriff auf das Mikrofon fehlgeschlagen.");
                 }
             };
+
             const stopRecording = () => {
                 if (mediaRecorderRef.current?.state === 'recording') {
                     mediaRecorderRef.current.stop();
+                }
+                if (streamRef.current) {
+                    streamRef.current.getTracks().forEach(track => track.stop());
+                    streamRef.current = null;
                 }
                 setIsRecording(false);
             };
@@ -283,34 +284,36 @@
             const handleLogin = (e) => { e.preventDefault(); setLoginError(""); if (!selectedUser) { setLoginError("Bitte wähle einen Benutzer aus."); return; } if (password === "0000") { setDisplayName(selectedUser); setIsLoggedIn(true); setPassword(""); } else { setLoginError("Falsches Kennwort."); } };
             const handleLogout = () => { setIsLoggedIn(false); setDisplayName(""); setSelectedUser(""); setPassword(""); setLoginError(""); };
             const handleReaction = async (messageId, emoji) => { if (!db || !userId) return; const msgRef = doc(db, "messages", messageId); const docSnap = await getDoc(msgRef); if (!docSnap.exists()) return; const reactions = docSnap.data().reactions || {}; const userList = reactions[emoji] || []; if (userList.includes(userId)) { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(userId) }); } else { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(userId) }); } setReactionPickerMsgId(null); };
-            
+
             if (processingAudio) return (<div className="flex items-center justify-center h-screen bg-gray-900 text-white"><p className="text-2xl animate-pulse">Verarbeite Audio...</p></div>);
             if (configError) return (<div className="flex flex-col items-center justify-center h-screen bg-red-900 text-white p-8"><div className="text-center max-w-2xl"><h1 className="text-3xl font-bold">FEHLER: Firebase Konfiguration!</h1><p className="mt-4 text-lg bg-red-800 p-3 rounded">{configError}</p></div></div>);
             if (isAppDestroyed) return (<div className="flex flex-col items-center justify-center h-screen bg-black text-red-500"><h1 className="text-4xl font-bold">DIENST EINGESTELLT</h1></div>);
             if (!isAuthReady) return (<div className="flex items-center justify-center h-screen bg-gray-900 text-white"><p className="text-2xl">Lade App...</p></div>);
             
-            if (!isLoggedIn) return (
-                <div className="flex items-center justify-center h-screen bg-gray-800">
-                    <div className="w-full max-w-sm p-8 space-y-6 bg-gray-900 rounded-xl shadow-lg">
-                        <h1 className="text-3xl font-bold text-center text-cyan-400">Anmelden</h1>
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <div>
-                                <label htmlFor="user-select" className="text-sm font-medium text-gray-300">Benutzer auswählen</label>
-                                <select id="user-select" value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500">
-                                    <option value="" disabled>-- Bitte wählen --</option>
-                                    {userList.map((name, index) => (<option key={`${name}-${index}`} value={name}>{name}</option>))}
-                                </select>
-                            </div>
-                            <div>
-                                <label htmlFor="password" className="text-sm font-medium text-gray-300">Kennwort</label>
-                                <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500" />
-                            </div>
-                            {loginError && <p className="text-sm text-red-500 text-center">{loginError}</p>}
-                            <button type="submit" className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg shadow-md transition-transform transform hover:scale-105">Betreten</button>
-                        </form>
+            if (!isLoggedIn) {
+                return (
+                    <div className="flex items-center justify-center h-screen bg-gray-800">
+                        <div className="w-full max-w-sm p-8 space-y-6 bg-gray-900 rounded-xl shadow-lg">
+                            <h1 className="text-3xl font-bold text-center text-cyan-400">Anmelden</h1>
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div>
+                                    <label htmlFor="user-select" className="text-sm font-medium text-gray-300">Benutzer auswählen</label>
+                                    <select id="user-select" value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500">
+                                        <option value="" disabled>-- Bitte wählen --</option>
+                                        {userList.map((name, index) => (<option key={`${name}-${index}`} value={name}>{name}</option>))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="password" className="text-sm font-medium text-gray-300">Kennwort</label>
+                                    <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500" />
+                                </div>
+                                {loginError && <p className="text-sm text-red-500 text-center">{loginError}</p>}
+                                <button type="submit" className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg shadow-md transition-transform transform hover:scale-105">Betreten</button>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            );
+                );
+            }
             
             return (<div className="flex flex-col h-screen bg-gray-800 text-white font-sans">
                 {showConfirmModal && <ConfirmationModal onConfirm={handleConfirmDestruct} onCancel={() => setShowConfirmModal(false)} />}
