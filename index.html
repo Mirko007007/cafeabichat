@@ -55,18 +55,27 @@
         const stringToHslColor = (str, s, l) => { let hash = 0; for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); } const h = hash % 360; return `hsl(${h}, ${s}%, ${l}%)`; };
         const EmojiPalette = ({ onSelect }) => (<div className="absolute bottom-12 bg-gray-800 border border-gray-700 rounded-lg p-2 shadow-lg flex flex-wrap gap-2 z-10">{EMOJIS.map(emoji => (<button key={emoji} onClick={() => onSelect(emoji)} className="text-2xl p-1 rounded-md hover:bg-gray-700 transition-colors">{emoji}</button>))}</div>);
 
+        const playAlertSound = () => {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(900, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.15);
+        };
+
         const ConfirmationModal = ({ onConfirm, onCancel }) => (
             <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
                 <div className="bg-gray-900 rounded-lg p-6 sm:p-8 shadow-2xl text-center max-w-sm w-full">
                     <h2 className="text-xl sm:text-2xl font-bold text-red-500">BIST DU SICHER?</h2>
-                    <p className="my-4 text-gray-300">
-                        Diese Aktion löscht **alle** Daten unwiderruflich und sperrt die App permanent.
-                    </p>
+                    <p className="my-4 text-gray-300">Diese Aktion löscht **alle** Daten unwiderruflich und sperrt die App permanent.</p>
                     <div className="flex justify-center gap-4 mt-6">
                         <button onClick={onCancel} className="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-colors">Abbrechen</button>
-                        <button onClick={onConfirm} className="px-6 py-2 bg-red-700 hover:bg-red-800 rounded-lg font-semibold transition-colors flex items-center">
-                            <SkullIcon /> Ja, löschen
-                        </button>
+                        <button onClick={onConfirm} className="px-6 py-2 bg-red-700 hover:bg-red-800 rounded-lg font-semibold transition-colors flex items-center"><SkullIcon /> Ja, löschen</button>
                     </div>
                 </div>
             </div>
@@ -136,11 +145,13 @@
                         newMessages.push({ id: doc.id, ...data, createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date() });
                     });
                     newMessages.sort((a, b) => a.createdAt - b.createdAt);
-                    setUserColors(colors);
+                    
                     if (messages.length > 0 && newMessages.length > messages.length) {
                         const lastNewMessage = newMessages[newMessages.length - 1];
+                        if (lastNewMessage.type === 'alert') playAlertSound();
                         if (lastNewMessage.uid !== userId && document.hidden) new Notification(`Neue Nachricht von ${lastNewMessage.displayName}`, { body: lastNewMessage.type === 'image' ? 'Bild gesendet' : lastNewMessage.content, icon: 'https://placehold.co/64x64/7E22CE/FFFFFF?text=C' });
                     }
+                    setUserColors(colors);
                     setMessages(newMessages);
                 }, (e) => { console.error("Fehler beim Abrufen der Nachrichten:", e); alert("Nachrichten konnten nicht geladen werden. Prüfen Sie Ihre Firestore-Sicherheitsregeln."); });
                 return () => unsub();
@@ -167,7 +178,7 @@
             const handleLogin = (e) => { e.preventDefault(); setLoginError(""); if (!selectedUser) { setLoginError("Bitte wähle einen Benutzer aus."); return; } if (password === "0000") { setDisplayName(selectedUser); setIsLoggedIn(true); setPassword(""); } else { setLoginError("Falsches Kennwort."); } };
             const handleLogout = () => { setIsLoggedIn(false); setDisplayName(""); setSelectedUser(""); setPassword(""); setLoginError(""); };
             const handleReaction = async (messageId, emoji) => { if (!db || !userId) return; const msgRef = doc(db, "messages", messageId); const docSnap = await getDoc(msgRef); if (!docSnap.exists()) return; const reactions = docSnap.data().reactions || {}; const userList = reactions[emoji] || []; if (userList.includes(userId)) { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(userId) }); } else { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(userId) }); } setReactionPickerMsgId(null); };
-            const handleFileSelect = async (e) => { const file = e.target.files[0]; if (!file || !file.type.startsWith('image/')) return; if(file.size > 1024 * 1024 * 2) { alert("Fehler: Das Bild ist zu groß (max. 2MB)."); return; } const reader = new FileReader(); reader.onload = async (event) => { try { await addDoc(collection(db, "messages"), { type: 'image', content: event.target.result, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); } catch (error) { console.error("Fehler beim Senden des Bildes:", error); alert(`Bild konnte nicht gesendet werden. Fehler: ${error.message}`); }}; reader.readAsDataURL(file); e.target.value = null; };
+            const handleFileSelect = async (e) => { const file = e.target.files[0]; if (!file || !file.type.startsWith('image/')) return; if(file.size > 1024 * 1024 * 5) { alert("Fehler: Das Bild ist zu groß (max. 5MB)."); return; } const reader = new FileReader(); reader.onload = async (event) => { try { await addDoc(collection(db, "messages"), { type: 'image', content: event.target.result, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} }); } catch (error) { console.error("Fehler beim Senden des Bildes:", error); alert(`Bild konnte nicht gesendet werden. Fehler: ${error.message}`); }}; reader.readAsDataURL(file); e.target.value = null; };
 
             if (configError) return (<div className="flex flex-col items-center justify-center h-screen bg-red-900 text-white p-8"><div className="text-center max-w-2xl"><h1 className="text-3xl font-bold">FEHLER: Firebase Konfiguration!</h1><p className="mt-4 text-lg bg-red-800 p-3 rounded">{configError}</p></div></div>);
             if (isAppDestroyed) return (<div className="flex flex-col items-center justify-center h-screen bg-black text-red-500"><h1 className="text-4xl font-bold">DIENST EINGESTELLT</h1></div>);
@@ -176,14 +187,16 @@
             
             return (<div className="flex flex-col h-screen bg-gray-800 text-white font-sans">
                 {showConfirmModal && <ConfirmationModal onConfirm={handleConfirmDestruct} onCancel={() => setShowConfirmModal(false)} />}
-                <header className="flex items-center justify-between p-3 sm:p-4 bg-gray-900 shadow-lg border-b border-gray-700">
-                    <button onClick={() => setShowConfirmModal(true)} className="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-2 sm:px-3 rounded-lg transition-colors flex items-center shadow-lg">
-                        <SkullIcon /> 
-                        <span className="hidden sm:inline ml-2">LÖSCHEN</span>
-                    </button>
-                    <h1 className="text-lg sm:text-xl font-bold text-center mx-2 truncate" style={{color: userColors[displayName] || '#FFFFFF'}}>Cafe Abi Chat</h1>
-                    <div className="flex items-center space-x-2 sm:space-x-4">
-                        <div className="text-right">
+                <header className="grid grid-cols-3 items-center p-3 sm:p-4 bg-gray-900 shadow-lg border-b border-gray-700">
+                    <div className="justify-self-start">
+                        <button onClick={() => setShowConfirmModal(true)} className="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-2 sm:px-3 rounded-lg transition-colors flex items-center shadow-lg">
+                            <SkullIcon /> 
+                            <span className="hidden sm:inline ml-2">LÖSCHEN</span>
+                        </button>
+                    </div>
+                    <h1 className="text-xl sm:text-2xl font-bold text-center mx-2 truncate bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-transparent bg-clip-text">Cafe Abi Chat</h1>
+                    <div className="flex items-center space-x-2 sm:space-x-4 justify-self-end">
+                        <div className="text-right hidden sm:block">
                             <span className="font-semibold text-sm sm:text-base truncate" style={{color: userColors[displayName] || '#FFFFFF'}}>{displayName}</span>
                         </div>
                         <button onClick={handleLogout} className="bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 rounded-lg transition-colors flex-shrink-0">
