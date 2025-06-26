@@ -237,7 +237,9 @@
                             const distortedBlob = await distortAudio(audioBlob);
                             const filePath = `audio/${Date.now()}.wav`;
                             const downloadURL = await uploadFile(distortedBlob, filePath);
-                            if(downloadURL) sendMediaMessage(downloadURL, 'audio');
+                            if(downloadURL) {
+                                await sendMediaMessage(downloadURL, 'audio');
+                            }
                         } catch (error) {
                             console.error("Fehler bei der Audio-Verarbeitung: ", error);
                             alert("Die Sprachnachricht konnte nicht verarbeitet werden.");
