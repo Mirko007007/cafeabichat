@@ -51,6 +51,8 @@
         const EmojiIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM8.25 10.5a.75.75 0 000 1.5h.01a.75.75 0 000-1.5H8.25zm3.74-1.24a.75.75 0 00-1.06-1.06l-1.5 1.5a.75.75 0 101.06 1.06l1.5-1.5zm2.01 1.24a.75.75 0 000 1.5h.01a.75.75 0 000-1.5H14zm3.25-1.5a.75.75 0 00-1.06-1.06l-1.5 1.5a.75.75 0 101.06 1.06l1.5-1.5zM12 15.75a3 3 0 002.645-1.61.75.75 0 011.23.756 4.5 4.5 0 01-7.75 0 .75.75 0 011.23-.756A3 3 0 0012 15.75z" clipRule="evenodd" /></svg>);
         const SkullIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>);
         const SwitchUserIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>);
+        const MicIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M12 18.75a6 6 0 006-6v-1.5a6 6 0 00-12 0v1.5a6 6 0 006 6zM12 2.25a.75.75 0 01.75.75v6.31l-1.5-1.5V3a.75.75 0 01.75-.75zM10.5 3a.75.75 0 00-1.5 0v6.31l1.5-1.5V3zM12 16.5a4.5 4.5 0 004.5-4.5v-1.5a4.5 4.5 0 00-9 0v1.5a4.5 4.5 0 004.5 4.5z" /></svg>);
+        
         const EMOJIS = ['😂', '❤️', '👍', '🤔', '😢', '🎉', '🔥', '🙏'];
         const stringToHslColor = (str, s, l) => { let hash = 0; for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); } const h = hash % 360; return `hsl(${h}, ${s}%, ${l}%)`; };
         const EmojiPalette = ({ onSelect }) => (<div className="absolute bottom-12 bg-gray-800 border border-gray-700 rounded-lg p-2 shadow-lg flex flex-wrap gap-2 z-10">{EMOJIS.map(emoji => (<button key={emoji} onClick={() => onSelect(emoji)} className="text-2xl p-1 rounded-md hover:bg-gray-700 transition-colors">{emoji}</button>))}</div>);
@@ -99,10 +101,12 @@
             const [userColors, setUserColors] = useState({});
             const [configError, setConfigError] = useState(null);
             const [showConfirmModal, setShowConfirmModal] = useState(false);
+            const [isRecording, setIsRecording] = useState(false);
+            const mediaRecorderRef = useRef(null);
+            const audioChunksRef = useRef([]);
             const messagesEndRef = useRef(null);
             const fileInputRef = useRef(null);
             const userList = ['M', 'C', 'Ö', 'Gustavo', 'S', 'M', 'T'];
-
             const firebaseConfig = {
                 apiKey: "AIzaSyCFWImLP_1Fa_JWW9MBGg1m8W-r8pV7gSI",
                 authDomain: "cafeabichat.firebaseapp.com",
@@ -157,6 +161,55 @@
                 return () => unsub();
             }, [isLoggedIn, db, isAppDestroyed, userId]);
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+            
+            const sendVoiceMessage = async (audioUrl) => {
+                if (!db || !user) return;
+                try {
+                    await addDoc(collection(db, "messages"), {
+                        type: 'audio',
+                        content: audioUrl,
+                        createdAt: new Date(),
+                        uid: user.uid,
+                        displayName: displayName,
+                        reactions: {}
+                    });
+                } catch (error) {
+                    console.error("Fehler beim Senden der Sprachnachricht:", error);
+                    alert(`Sprachnachricht konnte nicht gesendet werden. Fehler: ${error.message}`);
+                }
+            };
+            
+            const startRecording = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorderRef.current = new MediaRecorder(stream);
+                    audioChunksRef.current = [];
+                    mediaRecorderRef.current.ondataavailable = (event) => {
+                        audioChunksRef.current.push(event.data);
+                    };
+                    mediaRecorderRef.current.onstop = () => {
+                        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            sendVoiceMessage(reader.result);
+                        };
+                        reader.readAsDataURL(audioBlob);
+                        stream.getTracks().forEach(track => track.stop()); // Mikrofon freigeben
+                    };
+                    mediaRecorderRef.current.start();
+                    setIsRecording(true);
+                } catch (error) {
+                    console.error("Fehler beim Zugriff auf das Mikrofon:", error);
+                    alert("Zugriff auf das Mikrofon fehlgeschlagen. Bitte stellen Sie sicher, dass Sie die Berechtigung erteilt haben.");
+                }
+            };
+
+            const stopRecording = () => {
+                if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                    mediaRecorderRef.current.stop();
+                }
+                setIsRecording(false);
+            };
 
             const sendMessage = async () => {
                 const trimmedMessage = newMessage.trim();
@@ -181,8 +234,8 @@
             const handleFileSelect = async (e) => { 
                 const file = e.target.files[0]; 
                 if (!file || !file.type.startsWith('image/')) return; 
-                if(file.size > 1024 * 1024 * 10) { // Erhöht auf 10MB
-                    alert("Fehler: Das Bild ist zu groß (max. 10MB)."); 
+                if(file.size > 1024 * 1024 * 25) { 
+                    alert("Fehler: Das Bild ist zu groß (max. 25MB)."); 
                     return; 
                 } 
                 const reader = new FileReader(); 
@@ -206,7 +259,7 @@
             return (<div className="flex flex-col h-screen bg-gray-800 text-white font-sans">
                 {showConfirmModal && <ConfirmationModal onConfirm={handleConfirmDestruct} onCancel={() => setShowConfirmModal(false)} />}
                 <header className="grid grid-cols-3 items-center p-3 sm:p-4 bg-gray-900 shadow-lg border-b border-gray-700">
-                    <div className="justify-self-start">
+                     <div className="justify-self-start">
                         <button onClick={() => setShowConfirmModal(true)} className="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-2 sm:px-3 rounded-lg transition-colors flex items-center shadow-lg">
                             <SkullIcon /> 
                             <span className="hidden sm:inline ml-2">LÖSCHEN</span>
@@ -223,20 +276,35 @@
                     </div>
                 </header>
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-2">{messages.map((msg) => {
-                    if (msg.type === 'alert') {
-                        return (<div key={msg.id} className="w-full my-3 text-center"><div className="inline-block bg-red-800 border-2 border-red-500 rounded-lg px-6 py-2 animate-pulse"><p className="text-white font-bold text-xl uppercase tracking-wider">{msg.content}</p></div></div>);
-                    }
+                    if (msg.type === 'alert') { return (<div key={msg.id} className="w-full my-3 text-center"><div className="inline-block bg-red-800 border-2 border-red-500 rounded-lg px-6 py-2 animate-pulse"><p className="text-white font-bold text-xl uppercase tracking-wider">{msg.content}</p></div></div>); }
                     const userColor = userColors[msg.displayName] || '#718096';
-                    return (<div key={msg.id} className={`group flex items-end gap-3 max-w-xl ${msg.uid === userId ? "ml-auto flex-row-reverse" : "mr-auto"}`}><div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style={{backgroundColor: userColor}}>{msg.displayName ? msg.displayName.charAt(0) : '?'}</div><div className="relative"><div className="rounded-xl px-4 py-2 shadow-md" style={{backgroundColor: msg.uid === userId ? userColor : '#2D3748'}}><div className="flex items-baseline gap-2"><p className="font-bold text-sm" style={{color: msg.uid !== userId ? userColor : '#FFFFFF'}}>{msg.uid === userId ? 'Du' : msg.displayName}</p><p className="text-xs text-gray-400">{msg.createdAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</p></div>{msg.type === 'image' ? (<img src={msg.content} alt="Gesendetes Bild" className="mt-2 rounded-lg max-w-xs md:max-w-sm" />) : (<p className="text-white mt-1 whitespace-pre-wrap break-words">{msg.content}</p>)}</div>{msg.reactions && Object.keys(msg.reactions).length > 0 && (<div className="flex gap-1 flex-wrap mt-1 px-1">{Object.entries(msg.reactions).map(([emoji, uids]) => (uids && uids.length > 0 && <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${uids.includes(userId) ? 'border-cyan-400' : 'border-gray-500'}`} style={{backgroundColor: uids.includes(userId) ? userColor : '#4A5568'}}>{emoji} {uids.length}</button>))}</div>)}<button onClick={() => setReactionPickerMsgId(reactionPickerMsgId === msg.id ? null : msg.id)} className="absolute -top-3 -right-3 bg-gray-700 rounded-full p-1 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"><EmojiIcon /></button>{reactionPickerMsgId === msg.id && (<div className="absolute -top-12 right-0 z-20"><EmojiPalette onSelect={(emoji) => handleReaction(msg.id, emoji)} /></div>)}</div></div>);
-                })} <div ref={messagesEndRef} /> </main><footer className="p-4 bg-gray-900 border-t border-gray-700"><div className="relative">{showEmojiPicker && <EmojiPalette onSelect={(emoji) => setNewMessage(m => m + emoji)} /> }
-                <form onSubmit={handleFormSubmit} className="flex items-center space-x-2 sm:space-x-4">
-                    <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" />
-                    <button type="button" onClick={() => fileInputRef.current.click()} className="p-2 text-gray-400 hover:text-white transition-colors"><AttachmentIcon /></button>
-                    <button type="button" onClick={() => setShowEmojiPicker(s => !s)} className="p-2 text-gray-400 hover:text-white transition-colors"><EmojiIcon /></button>
-                    <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleInputKeyDown} placeholder="Schreibe eine Nachricht..." className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" autoComplete="off" />
-                    <button type="submit" disabled={!newMessage.trim()} className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 text-white font-bold p-2 rounded-lg flex items-center justify-center transition-colors"><SendIcon /></button>
-                </form>
-            </div></footer></div>);
+                    return (<div key={msg.id} className={`group flex items-end gap-3 max-w-xl ${msg.uid === userId ? "ml-auto flex-row-reverse" : "mr-auto"}`}><div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style={{backgroundColor: userColor}}>{msg.displayName ? msg.displayName.charAt(0) : '?'}</div><div className="relative"><div className="rounded-xl px-4 py-2 shadow-md" style={{backgroundColor: msg.uid === userId ? userColor : '#2D3748'}}><div className="flex items-baseline gap-2"><p className="font-bold text-sm" style={{color: msg.uid !== userId ? userColor : '#FFFFFF'}}>{msg.uid === userId ? 'Du' : msg.displayName}</p><p className="text-xs text-gray-400">{msg.createdAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</p></div>
+                        {msg.type === 'image' ? (<img src={msg.content} alt="Gesendetes Bild" className="mt-2 rounded-lg max-w-xs md:max-w-sm" />) 
+                        : msg.type === 'audio' ? (<audio src={msg.content} controls className="mt-2 w-64"></audio>)
+                        : (<p className="text-white mt-1 whitespace-pre-wrap break-words">{msg.content}</p>)}
+                    </div>{msg.reactions && Object.keys(msg.reactions).length > 0 && (<div className="flex gap-1 flex-wrap mt-1 px-1">{Object.entries(msg.reactions).map(([emoji, uids]) => (uids && uids.length > 0 && <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${uids.includes(userId) ? 'border-cyan-400' : 'border-gray-500'}`} style={{backgroundColor: uids.includes(userId) ? userColor : '#4A5568'}}>{emoji} {uids.length}</button>))}</div>)}<button onClick={() => setReactionPickerMsgId(reactionPickerMsgId === msg.id ? null : msg.id)} className="absolute -top-3 -right-3 bg-gray-700 rounded-full p-1 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"><EmojiIcon /></button>{reactionPickerMsgId === msg.id && (<div className="absolute -top-12 right-0 z-20"><EmojiPalette onSelect={(emoji) => handleReaction(msg.id, emoji)} /></div>)}</div></div>);
+                })} <div ref={messagesEndRef} /> </main>
+                <footer className="p-4 bg-gray-900 border-t border-gray-700">
+                    <div className="relative">
+                        {showEmojiPicker && <EmojiPalette onSelect={(emoji) => setNewMessage(m => m + emoji)} /> }
+                        {isRecording ? (
+                            <div className="flex items-center justify-between bg-gray-700 rounded-lg px-4 py-2">
+                                <span className="text-red-500 font-bold animate-pulse">Aufnahme läuft...</span>
+                                <button onClick={stopRecording} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Stop</button>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleFormSubmit} className="flex items-center space-x-2 sm:space-x-4">
+                                <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" />
+                                <button type="button" onClick={() => fileInputRef.current.click()} className="p-2 text-gray-400 hover:text-white transition-colors"><AttachmentIcon /></button>
+                                <button type="button" onClick={() => setShowEmojiPicker(s => !s)} className="p-2 text-gray-400 hover:text-white transition-colors"><EmojiIcon /></button>
+                                <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleInputKeyDown} placeholder="Schreibe eine Nachricht..." className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" autoComplete="off" />
+                                <button type="button" onClick={startRecording} className="p-2 text-gray-400 hover:text-white transition-colors"><MicIcon /></button>
+                                <button type="submit" disabled={!newMessage.trim()} className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 text-white font-bold p-2 rounded-lg flex items-center justify-center transition-colors"><SendIcon /></button>
+                            </form>
+                        )}
+                    </div>
+                </footer>
+            </div>);
         };
         
         const container = document.getElementById('root');
@@ -245,3 +313,4 @@
     </script>
 </body>
 </html>
+
