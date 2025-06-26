@@ -123,7 +123,7 @@
                 if (!isLoggedIn || !db) return;
                 
                 const userDocRef = doc(db, 'users', userId);
-                setDoc(userDocRef, { displayName, online: true }, { merge: true });
+                setDoc(userDocRef, { displayName, online: true, id: userId }, { merge: true });
 
                 const usersRef = collection(db, 'users');
                 const q = query(usersRef);
@@ -196,13 +196,12 @@
             };
             
             const selectChat = (chatUser) => {
-                if (!chatUser.id) return;
-                
                 let newChatId, newChatName;
                 if (!chatUser || chatUser.id === 'public') {
                     newChatId = 'public';
                     newChatName = 'Cafe Abi Chat';
                 } else {
+                    if (!chatUser.id) return; 
                     const sortedIds = [userId, chatUser.id].sort();
                     newChatId = `private_${sortedIds[0]}_${sortedIds[1]}`;
                     newChatName = `Privater Chat mit ${chatUser.displayName}`;
@@ -357,18 +356,19 @@
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
             const uploadFile = async (file, path) => {
-                if (!storage) return null;
+                 if (!storage) return null;
                 setProcessing(true);
                 const storageRef = ref(storage, path);
                 try {
                     await uploadBytes(storageRef, file);
-                    return await getDownloadURL(storageRef);
+                    const downloadURL = await getDownloadURL(storageRef);
+                    setProcessing(false);
+                    return downloadURL;
                 } catch (error) {
                     console.error("Upload-Fehler:", error);
                     alert(`Datei konnte nicht hochgeladen werden. Fehler: ${error.code}`);
-                    return null;
-                } finally {
                     setProcessing(false);
+                    return null;
                 }
             };
             const sendMediaMessage = async (url, type) => {
@@ -385,14 +385,12 @@
                     audioChunksRef.current = [];
                     mediaRecorderRef.current.ondataavailable = (event) => audioChunksRef.current.push(event.data);
                     mediaRecorderRef.current.onstop = async () => {
-                        setProcessing(true);
                         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                         const filePath = `audio/${Date.now()}.webm`;
                         const downloadURL = await uploadFile(audioBlob, filePath);
                         if(downloadURL) {
                             await sendMediaMessage(downloadURL, 'audio');
                         }
-                        setProcessing(false);
                     };
                     mediaRecorderRef.current.start();
                     setIsRecording(true);
@@ -478,4 +476,3 @@
     </script>
 </body>
 </html>
-
