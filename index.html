@@ -40,7 +40,6 @@
 
         // --- HILFSKOMPONENTEN & FUNKTIONEN ---
         const SendIcon = () => (<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>);
-        const AttachmentIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path fillRule="evenodd" d="M18.97 3.659a2.25 2.25 0 00-3.182 0l-10.5 10.5a.75.75 0 001.06 1.06l10.5-10.5a.75.75 0 011.06 0s.001.001.002.001a.75.75 0 010 1.06l-6.75 6.75a2.25 2.25 0 000 3.182s.001.001.001.002a2.25 2.25 0 003.182 0l6.75-6.75a3.75 3.75 0 00-5.303-5.303l-10.5 10.5a.75.75 0 000 1.061l.001.001a.75.75 0 001.06 0l10.5-10.5a2.25 2.25 0 013.182 0s.001.001.002.001a2.25 2.25 0 010 3.182l-6.75 6.75a3.75 3.75 0 11-5.303-5.303l6.75-6.75a.75.75 0 00-1.06-1.06l-6.75 6.75a5.25 5.25 0 007.424 7.424l10.5-10.5a3.75 3.75 0 000-5.303z" clipRule="evenodd" /></svg>);
         const EmojiIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM8.25 10.5a.75.75 0 000 1.5h.01a.75.75 0 000-1.5H8.25zm3.74-1.24a.75.75 0 00-1.06-1.06l-1.5 1.5a.75.75 0 101.06 1.06l1.5-1.5zm2.01 1.24a.75.75 0 000 1.5h.01a.75.75 0 000-1.5H14zm3.25-1.5a.75.75 0 00-1.06-1.06l-1.5 1.5a.75.75 0 101.06 1.06l1.5-1.5zM12 15.75a3 3 0 002.645-1.61.75.75 0 011.23.756 4.5 4.5 0 01-7.75 0 .75.75 0 011.23-.756A3 3 0 0012 15.75z" clipRule="evenodd" /></svg>);
         const SkullIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>);
         const SwitchUserIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>);
@@ -75,7 +74,7 @@
                 </div>
             </div>
         );
-
+        
         const App = () => {
             const [db, setDb] = useState(null);
             const [storage, setStorage] = useState(null);
@@ -96,11 +95,10 @@
             const [configError, setConfigError] = useState(null);
             const [showConfirmModal, setShowConfirmModal] = useState(false);
             const [isRecording, setIsRecording] = useState(false);
-            const [uploading, setUploading] = useState(false);
+            const [processingAudio, setProcessingAudio] = useState(false);
             const mediaRecorderRef = useRef(null);
             const audioChunksRef = useRef([]);
             const messagesEndRef = useRef(null);
-            const fileInputRef = useRef(null);
             const userList = ['M', 'C', 'Ö', 'Gustavo', 'S', 'M', 'T'];
             const firebaseConfig = {
                 apiKey: "AIzaSyCFWImLP_1Fa_JWW9MBGg1m8W-r8pV7gSI",
@@ -161,46 +159,101 @@
             
             const uploadFile = async (file, path) => {
                 if (!storage) return null;
-                setUploading(true);
+                setProcessingAudio(true);
                 const storageRef = ref(storage, path);
                 try {
                     await uploadBytes(storageRef, file);
-                    const downloadURL = await getDownloadURL(storageRef);
-                    return downloadURL;
+                    return await getDownloadURL(storageRef);
                 } catch (error) {
                     console.error("Upload-Fehler:", error);
-                    alert(`Datei konnte nicht hochgeladen werden. Prüfen Sie die Firebase Storage Regeln. Fehler: ${error.code}`);
+                    alert(`Datei konnte nicht hochgeladen werden. Fehler: ${error.code}`);
                     return null;
                 } finally {
-                    setUploading(false);
+                    setProcessingAudio(false);
                 }
             };
             
             const sendMediaMessage = async (url, type) => {
                 await addDoc(collection(db, "messages"), { type, content: url, createdAt: new Date(), uid: user.uid, displayName: displayName, reactions: {} });
             };
-            
+
+            const distortAudio = async (audioBlob) => {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const arrayBuffer = await audioBlob.arrayBuffer();
+                const originalBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                
+                const offlineCtx = new OfflineAudioContext(originalBuffer.numberOfChannels, originalBuffer.length, originalBuffer.sampleRate);
+                const source = offlineCtx.createBufferSource();
+                source.buffer = originalBuffer;
+
+                source.detune.value = -800;
+                
+                source.connect(offlineCtx.destination);
+                source.start();
+
+                const distortedBuffer = await offlineCtx.startRendering();
+                return bufferToWave(distortedBuffer, offlineCtx.length);
+            };
+
+            const bufferToWave = (abuffer, len) => {
+                let numOfChan = abuffer.numberOfChannels,
+                length = len * numOfChan * 2 + 44,
+                buffer = new ArrayBuffer(length),
+                view = new DataView(buffer),
+                channels = [], i, sample,
+                offset = 0,
+                pos = 0;
+
+                setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+                setUint32(0x20746d66); setUint32(16); setUint16(1);
+                setUint16(numOfChan); setUint32(abuffer.sampleRate);
+                setUint32(abuffer.sampleRate * 2 * numOfChan);
+                setUint16(numOfChan * 2); setUint16(16);
+                setUint32(0x61746164); setUint32(length - pos - 4);
+
+                function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+                function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+
+                for(i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+                while(pos < length) {
+                    for(i = 0; i < numOfChan; i++) {
+                        sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                        sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                        view.setInt16(pos, sample, true);
+                        pos += 2;
+                    }
+                    offset++
+                }
+                return new Blob([view], {type: 'audio/wav'});
+            }
+
             const startRecording = async () => {
-                 try {
+                try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorderRef.current = new MediaRecorder(stream);
                     audioChunksRef.current = [];
-                    mediaRecorderRef.current.ondataavailable = (event) => {
-                        audioChunksRef.current.push(event.data);
-                    };
-                    mediaRecorderRef.current.onstop = () => {
+                    mediaRecorderRef.current.ondataavailable = (event) => audioChunksRef.current.push(event.data);
+                    mediaRecorderRef.current.onstop = async () => {
+                        setProcessingAudio(true);
                         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                        const filePath = `audio/${Date.now()}.webm`;
-                        uploadFile(audioBlob, filePath).then(url => {
-                            if(url) sendMediaMessage(url, 'audio');
-                        });
-                        stream.getTracks().forEach(track => track.stop());
+                        try {
+                            const distortedBlob = await distortAudio(audioBlob);
+                            const filePath = `audio/${Date.now()}.wav`;
+                            const downloadURL = await uploadFile(distortedBlob, filePath);
+                            if(downloadURL) sendMediaMessage(downloadURL, 'audio');
+                        } catch (error) {
+                            console.error("Fehler bei der Audio-Verzerrung: ", error);
+                            alert("Die Sprachnachricht konnte nicht verarbeitet werden.");
+                        } finally {
+                           setProcessingAudio(false);
+                           stream.getTracks().forEach(track => track.stop());
+                        }
                     };
                     mediaRecorderRef.current.start();
                     setIsRecording(true);
                 } catch (error) {
                     console.error("Fehler beim Zugriff auf das Mikrofon:", error);
-                    alert("Zugriff auf das Mikrofon fehlgeschlagen. Bitte stellen Sie sicher, dass Sie die Berechtigung erteilt haben.");
+                    alert("Zugriff auf das Mikrofon fehlgeschlagen.");
                 }
             };
             const stopRecording = () => {
@@ -231,62 +284,7 @@
             const handleLogout = () => { setIsLoggedIn(false); setDisplayName(""); setSelectedUser(""); setPassword(""); setLoginError(""); };
             const handleReaction = async (messageId, emoji) => { if (!db || !userId) return; const msgRef = doc(db, "messages", messageId); const docSnap = await getDoc(msgRef); if (!docSnap.exists()) return; const reactions = docSnap.data().reactions || {}; const userList = reactions[emoji] || []; if (userList.includes(userId)) { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayRemove(userId) }); } else { await updateDoc(msgRef, { [`reactions.${emoji}`]: arrayUnion(userId) }); } setReactionPickerMsgId(null); };
             
-            const handleFileSelect = async (e) => { 
-                const file = e.target.files[0]; 
-                if (!file || !file.type.startsWith('image/')) return; 
-
-                setUploading(true);
-                try {
-                    const compressedFile = await compressImage(file);
-                    const filePath = `images/${Date.now()}-${compressedFile.name}`;
-                    const downloadURL = await uploadFile(compressedFile, filePath);
-                    if(downloadURL) await sendMediaMessage(downloadURL, 'image');
-                } catch (error) {
-                    console.error("Fehler bei der Bildverarbeitung:", error);
-                    alert("Bild konnte nicht verarbeitet werden.");
-                } finally {
-                    setUploading(false);
-                }
-                e.target.value = null; 
-            };
-
-            const compressImage = (file) => {
-                return new Promise((resolve, reject) => {
-                    const MAX_WIDTH = 1920;
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = (event) => {
-                        const img = new Image();
-                        img.src = event.target.result;
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            let { width, height } = img;
-
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
-                            
-                            canvas.width = width;
-                            canvas.height = height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, width, height);
-
-                            canvas.toBlob((blob) => {
-                                if (blob) {
-                                    resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
-                                } else {
-                                    reject(new Error('Canvas to Blob Konvertierung fehlgeschlagen'));
-                                }
-                            }, 'image/jpeg', 0.8);
-                        };
-                        img.onerror = reject;
-                    };
-                    reader.onerror = reject;
-                });
-            };
-
-            if (uploading) return (<div className="flex items-center justify-center h-screen bg-gray-900 text-white"><p className="text-2xl animate-pulse">Lade hoch...</p></div>);
+            if (processingAudio) return (<div className="flex items-center justify-center h-screen bg-gray-900 text-white"><p className="text-2xl animate-pulse">Verarbeite Audio...</p></div>);
             if (configError) return (<div className="flex flex-col items-center justify-center h-screen bg-red-900 text-white p-8"><div className="text-center max-w-2xl"><h1 className="text-3xl font-bold">FEHLER: Firebase Konfiguration!</h1><p className="mt-4 text-lg bg-red-800 p-3 rounded">{configError}</p></div></div>);
             if (isAppDestroyed) return (<div className="flex flex-col items-center justify-center h-screen bg-black text-red-500"><h1 className="text-4xl font-bold">DIENST EINGESTELLT</h1></div>);
             if (!isAuthReady) return (<div className="flex items-center justify-center h-screen bg-gray-900 text-white"><p className="text-2xl">Lade App...</p></div>);
@@ -352,8 +350,6 @@
                             </div>
                         ) : (
                             <form onSubmit={handleFormSubmit} className="flex items-center space-x-2 sm:space-x-4">
-                                <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*" className="hidden" />
-                                <button type="button" onClick={() => fileInputRef.current.click()} className="p-2 text-gray-400 hover:text-white transition-colors"><AttachmentIcon /></button>
                                 <button type="button" onClick={() => setShowEmojiPicker(s => !s)} className="p-2 text-gray-400 hover:text-white transition-colors"><EmojiIcon /></button>
                                 <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleInputKeyDown} placeholder="Schreibe eine Nachricht..." className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500" autoComplete="off" />
                                 <button type="button" onClick={startRecording} className="p-2 text-gray-400 hover:text-white transition-colors"><MicIcon /></button>
@@ -371,5 +367,3 @@
     </script>
 </body>
 </html>
-
-
